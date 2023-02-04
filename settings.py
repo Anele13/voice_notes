@@ -1,0 +1,11 @@
+VARIABLES_DISPONIBLES = [
+    'CORDEROS',
+    'OVEJAS',
+    'CAPONES',
+]
+
+ACCIONES_DISPONIBLES = [
+    'VENDER',
+    'MORIR',
+    'COMPRAR',
+]

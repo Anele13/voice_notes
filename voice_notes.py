@@ -8,8 +8,10 @@ CATEGORIAS={
     'MUERTES': {'LEMMA':'morir'},
     'NACIMIENTOS' : {'LEMMA':'nacer'},
     'VENTAS': {'LEMMA':'vender'},
-    'COMPRAS': {'LEMMA':'comprar'}
+    'COMPRAS': {'LEMMA':'comprar'},
 }
+
+NOUNS = []
 
 class VoiceNotes():
     text_from_voice = None 
@@ -35,28 +37,48 @@ class VoiceNotes():
                 return categoria
 
     def get_data(self):
+        df_final = pd.DataFrame(columns=['accion', 'cantidad', 'categoria'])
         if self.text_from_voice:
             df = pd.DataFrame([self.text_from_voice],columns=['text'])
             text = df['text'][0]
-            pattern_father = [[{'POS':'VERB'},{'POS':'NUM'}]]
+            pattern_father = [
+                [{'POS':'VERB', 'LEMMA': 'nacer'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'oveja'}], #--> poner el lemma, el lemma lo transforma en singular
+                [{'POS':'VERB', 'LEMMA': 'morir'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'oveja'}],
+                [{'POS':'VERB', 'LEMMA': 'vender'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'oveja'}],
+                [{'POS':'VERB', 'LEMMA': 'comprar'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'oveja'}],
+
+                [{'POS':'VERB', 'LEMMA': 'nacer'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'cordero'}], #--> poner el lemma, el lemma lo transforma en singular
+                [{'POS':'VERB', 'LEMMA': 'morir'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'cordero'}],
+                [{'POS':'VERB', 'LEMMA': 'vender'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'cordero'}],
+                [{'POS':'VERB', 'LEMMA': 'comprar'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'cordero'}],
+
+            ]
             nlp = es_core_news_sm.load()
             doc = nlp(text)
+            # Find named entities, phrases and concepts
+            for token in doc:
+                print("...........>")
+                print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_, token.shape_, token.is_alpha, token.is_stop)
             matcher = Matcher(nlp.vocab) 
             matcher.add("matching_father", pattern_father)    
             matches = matcher(doc)
             sub_text = ''
-            df_final = pd.DataFrame()
             for match_id, start, end in matches:
                 span = doc[start:end]
-                sub_text = span.text
+                sub_text = span.lemma_ #span.text
                 tokens = sub_text.split(' ')
-                categoria = self.categorize(tokens[0])
-                df_final[categoria] = [tokens[1]]
-            #respuesta = ''
-            #for k,v in df_final.to_dict().items():
-            #    respuesta = respuesta + f'{k} : {list(v.values())[0]}\n'
-            return df_final.to_dict()
-        return None
+                l=[]
+                l.append(tokens[0])
+                l.append(tokens[1])
+                l.append(tokens[2])
+                df_final = df_final.append(pd.Series(l, index=['accion', 'cantidad', 'categoria']), ignore_index=True)
+            try:
+                df_final.cantidad = df_final.cantidad.apply(lambda row: str(row).replace('.',''))
+                df_final.cantidad = df_final.cantidad.astype('int64')
+            except Exception as e:
+                raise e
+        return df_final
+
 
     def __init__(self, path):
         self.set_text_from_voice(path)

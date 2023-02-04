@@ -9,13 +9,12 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 CREDENTIALS = os.getenv('CREDENTIALS')
 
 class User():
-    def __init__(self,id, first_name, last_name, photo_url, auth_date, campo_id):
-        self.id=id
-        self.first_name=first_name
-        self.last_name=last_name
-        self.photo_url=photo_url
-        self.auth_date=auth_date
-        self.campo_id=campo_id
+    def __init__(self, *args, **kwargs):
+        self.id=kwargs.get('id',None)
+        self.first_name=kwargs.get('first_name',None)
+        self.last_name=kwargs.get('last_name',None)
+        self.auth_date=kwargs.get('auth_date',None)
+        self.campo_id=kwargs.get('campo_id',None)
 
     def __str__(self):
         return f'Usuario: {self.first_name} {self.last_name}'
@@ -32,23 +31,37 @@ class FirebaseDB():
             return User(**_user_data)       
         return None         
 
-    
-    def create_user(self):
-        reference = db.reference("user")
-        _user_data ={'id': 657977867,
-                    'first_name': 'Prueba', 
-                    'last_name': 'Prueba', 
-                    'photo_url': 'https://t.me/i/userpic/320/J-dTesjUFxLC-XWoavzXoocxHHakHq1Ux8TTkwnUVCk.jpg', 
-                    'auth_date': '1653826990', 
-                    'campo_id': 1}     
-        reference.set({_user_data.pop('id'):_user_data})
-
-
     def send_realtime_data(self, user_id, data):
+        """
+        Modifica solo la informacion diaria del campo
+        """
         user = self.authenticate(user_id)
-        if data and user: 
+        if user: 
             campo_id=user.campo_id
-            now = str(datetime.now().date())
-            if data:
+            _diaria_data = db.reference(f"campo/{campo_id}/diaria/").get()
+            d = {}
+            for k, v in _diaria_data.items():
+                valor = 0
+                try:
+                    valor = int(v)
+                except:
+                    pass 
+                d[k] = valor
+
+            if isinstance(data, dict):
                 for key, value in data.items():
-                    db.reference(f'campo/{campo_id}/{now}/{key}').set(value)
+                    d[key] = d[key] + value
+            else:
+                data['categoria'] = data.categoria.apply(lambda row: f'{row}s')
+                for index, row in data.iterrows():
+                    if row.accion in ['comprar', 'nacer']:
+                        d[row.categoria] = d[row.categoria] + row.cantidad
+                    else: #morir, vender 
+                        d[row.categoria] = d[row.categoria] - row.cantidad
+                
+            # Reemplazar por 0 valores negativos
+            d2 = {}
+            for k, v in d.items():
+                d2[k] = v if v >= 0 else 0
+
+            db.reference(f'campo/{campo_id}/diaria/').set(d2)
