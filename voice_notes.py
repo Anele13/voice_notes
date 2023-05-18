@@ -4,15 +4,6 @@ import pandas as pd
 import es_core_news_sm
 from spacy.matcher import Matcher
 
-CATEGORIAS={
-    'MUERTES': {'LEMMA':'morir'},
-    'NACIMIENTOS' : {'LEMMA':'nacer'},
-    'VENTAS': {'LEMMA':'vender'},
-    'COMPRAS': {'LEMMA':'comprar'},
-}
-
-NOUNS = []
-
 class VoiceNotes():
     text_from_voice = None 
     
@@ -26,15 +17,6 @@ class VoiceNotes():
         except Exception as e:
             pass
     
-    def categorize(self,text):
-        nlp = es_core_news_sm.load()
-        doc = nlp(text)
-        for categoria, regexp in CATEGORIAS.items():
-            matcher = Matcher(nlp.vocab) 
-            matcher.add("matching_father", [[regexp]])    
-            matches = matcher(doc)
-            if matches:
-                return categoria
 
     def get_data(self):
         df_final = pd.DataFrame(columns=['accion', 'cantidad', 'categoria'])
@@ -42,23 +24,27 @@ class VoiceNotes():
             df = pd.DataFrame([self.text_from_voice],columns=['text'])
             text = df['text'][0]
             pattern_father = [
-                [{'POS':'VERB', 'LEMMA': 'nacer'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'oveja'}], #--> poner el lemma, el lemma lo transforma en singular
                 [{'POS':'VERB', 'LEMMA': 'morir'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'oveja'}],
                 [{'POS':'VERB', 'LEMMA': 'vender'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'oveja'}],
                 [{'POS':'VERB', 'LEMMA': 'comprar'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'oveja'}],
+
+                [{'POS':'VERB', 'LEMMA': 'morir'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'carnero'}],
+                [{'POS':'VERB', 'LEMMA': 'vender'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'carnero'}],
+                [{'POS':'VERB', 'LEMMA': 'comprar'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'carnero'}],
 
                 [{'POS':'VERB', 'LEMMA': 'nacer'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'cordero'}], #--> poner el lemma, el lemma lo transforma en singular
                 [{'POS':'VERB', 'LEMMA': 'morir'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'cordero'}],
                 [{'POS':'VERB', 'LEMMA': 'vender'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'cordero'}],
                 [{'POS':'VERB', 'LEMMA': 'comprar'},{'POS':'NUM'}, {'POS':'NOUN', 'LEMMA': 'cordero'}],
-
             ]
             nlp = es_core_news_sm.load()
             doc = nlp(text)
-            # Find named entities, phrases and concepts
+            """
             for token in doc:
+                # Find named entities, phrases and concepts
                 print("...........>")
                 print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_, token.shape_, token.is_alpha, token.is_stop)
+            """
             matcher = Matcher(nlp.vocab) 
             matcher.add("matching_father", pattern_father)    
             matches = matcher(doc)
@@ -78,7 +64,6 @@ class VoiceNotes():
             except Exception as e:
                 raise e
         return df_final
-
 
     def __init__(self, path):
         self.set_text_from_voice(path)

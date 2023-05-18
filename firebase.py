@@ -3,6 +3,7 @@ from firebase_admin import db
 from datetime import datetime 
 from dotenv import load_dotenv
 import os
+import settings
 
 load_dotenv()
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -40,21 +41,22 @@ class FirebaseDB():
             campo_id=user.campo_id
             _diaria_data = db.reference(f"campo/{campo_id}/diaria/").get()
             d = {}
-            for k, v in _diaria_data.items():
-                valor = 0
-                try:
-                    valor = int(v)
-                except:
-                    pass 
-                d[k] = valor
+            if _diaria_data:
+                for k, v in _diaria_data.items():
+                    valor = 0
+                    try:
+                        valor = int(v)
+                    except:
+                        pass 
+                    d[k] = valor
 
             if isinstance(data, dict):
                 for key, value in data.items():
                     d[key] = d[key] + value
             else:
-                data['categoria'] = data.categoria.apply(lambda row: f'{row}s')
+                data['categoria'] = data.categoria.apply(lambda row: f'{row}s') #ovejas, carneros, corderos
                 for index, row in data.iterrows():
-                    if row.accion in ['comprar', 'nacer']:
+                    if row.accion.upper() in settings.ACCIONES_AUMENTO: #comprar, nacer
                         d[row.categoria] = d[row.categoria] + row.cantidad
                     else: #morir, vender 
                         d[row.categoria] = d[row.categoria] - row.cantidad
